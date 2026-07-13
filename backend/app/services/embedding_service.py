@@ -17,6 +17,25 @@ class EmbeddingService:
 
         # Convert NumPy array to normal Python list.
         return embeddings.tolist()
+    
+    def embed_query(self, query: str) -> list[float]:
+        """
+        Generate an embedding vector for a user's query.
+
+        Args:
+            query:
+                The user's question in plain text.
+
+        Returns:
+            A single embedding vector representing the semantic meaning
+            of the query.
+        """
+
+        # Generate embedding for the query.
+        embedding = self.model.encode(query)
+
+        # Convert NumPy array to Python list.
+        return embedding.tolist()
 
 
 # Create one object for the whole project.

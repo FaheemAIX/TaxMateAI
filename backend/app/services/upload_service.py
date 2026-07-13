@@ -13,6 +13,9 @@ from app.services.chunk_service import chunk_service
 # Import the embedding service
 from app.services.embedding_service import embedding_service
 
+# Import the FAISS service
+from app.services.faiss_service import faiss_service
+
 
 
 # Create one parser object.
@@ -35,6 +38,17 @@ class UploadService:
 
         # Generate embeddings from chunks.
         embeddings = embedding_service.embed_chunks(chunks)
+
+        # Store embeddings and their corresponding chunks in FAISS.
+        faiss_service.add_embeddings(embeddings=embeddings,chunks=chunks)
+
+        #print total number
+        print(f"Total number of chunks {len(chunks)}")
+        print(f"Total number of embeddings {len(embeddings)}")
+        print(f"Embedding dimensions {len(embeddings[0])}")
+       
+
+
 
         return file_path
 
