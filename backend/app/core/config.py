@@ -1,12 +1,13 @@
-# Import Path for creating platform-independent file paths.
 from pathlib import Path
+import os
+
+print("Current Working Directory:", os.getcwd())
+print(".env exists:", Path(".env").exists())
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-class Settings(BaseSettings):
-    """
-    Application settings loaded from the .env file.
-    """
 
+class Settings(BaseSettings):
     OPENAI_API_KEY: str
     OPENAI_MODEL: str = "gpt-4o-mini"
 
@@ -18,5 +19,4 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-# Root folder where uploaded documents will be stored.
 UPLOAD_DIR = Path("storage/uploads")

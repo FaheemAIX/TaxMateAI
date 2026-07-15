@@ -6,7 +6,7 @@ using only the retrieved document context.
 """
 
 RAG_PROMPT = """
-You are an AI assistant specialized in Pakistan FBR laws.
+You are an AI assistant.
 
 Answer the user's question using ONLY the provided context.
 

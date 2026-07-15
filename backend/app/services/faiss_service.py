@@ -75,9 +75,6 @@ class FAISSService:
         # Store the original chunks.
         self.chunks.extend(chunks)
 
-        # DEBUG: Remove after testing.
-        print(f"Vectors in FAISS Index: {self.index.ntotal}")
-
     def search(self, query_embedding: list[float], top_k: int = 3) -> list[str]:
         """
         Search the FAISS index and return the most relevant text chunks.
@@ -95,6 +92,7 @@ class FAISSService:
 
         # Convert the query embedding into a NumPy array.
         query_vector = np.array([query_embedding], dtype=np.float32)
+    
 
         # Search the FAISS index.
         distances, indices = self.index.search(query_vector, top_k)
@@ -109,6 +107,8 @@ class FAISSService:
                     self.chunks[index]
                 )
 
+        print(f"Total vectors in FAISS: {self.index.ntotal}")
+        
         return retrieved_chunks
 
 

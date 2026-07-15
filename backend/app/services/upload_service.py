@@ -48,8 +48,6 @@ class UploadService:
         print(f"Embedding dimensions {len(embeddings[0])}")
        
 
-
-
         return file_path
 
 
