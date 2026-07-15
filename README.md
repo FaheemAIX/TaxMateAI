@@ -54,6 +54,6 @@ Contributions are what make the open-source community such an amazing place to l
 5. Open a pull request.
 
 ## 📧 Contact
-Faheem Muhammad - [Your LinkedIn Profile Link]
+Faheem Muhammad - [LinkedIn](https://www.linkedin.com/in/muhammad-faheem-ullah-a15378232/)
 
-Project Link: [Your GitHub Repo URL]
+Project Link: [Github](https://github.com/FaheemAIX/TaxMateAI)
