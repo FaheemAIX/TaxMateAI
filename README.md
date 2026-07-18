@@ -56,4 +56,8 @@ Contributions are what make the open-source community such an amazing place to l
 ## 📧 Contact
 Faheem Muhammad - [LinkedIn](https://www.linkedin.com/in/muhammad-faheem-ullah-a15378232/)
 
+<<<<<<< HEAD
 Project Link: [Github](https://github.com/FaheemAIX/TaxMateAI)
+=======
+Project Link: [Github](https://github.com/FaheemAIX/TaxMateAI)
+>>>>>>> fe616081b9a44b78c6d3a782a4286fb8c2306c56
