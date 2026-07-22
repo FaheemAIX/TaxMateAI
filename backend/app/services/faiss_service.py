@@ -57,11 +57,15 @@ class FAISSService:
         # creates empty list
         self.chunks: list[str] = []
 
+        # Store metadata for each chunk.
+        self.metadata: list[dict] = []
+
         # Load previously saved vector store if it exists.
         self.load_index()
         self.load_chunks()
+        self.load_metadata()
 
-    def add_embeddings(self, embeddings: list[list[float]],chunks: list[str]) -> None:
+    def add_embeddings(self, embeddings: list[list[float]],chunks: list[str], metadata: list[dict]) -> None:
        
         """
         Add embeddings and their corresponding text chunks to the FAISS index.
@@ -87,9 +91,13 @@ class FAISSService:
         # Store the original chunks.
         self.chunks.extend(chunks)
 
+        # Store metadata.
+        self.metadata.extend(metadata)
+
         # Persist the updated vector store.
         self.save_index()
         self.save_chunks()
+        self.save_metadata()
 
         # DEBUG: Remove after testing.
         print(f"Vectors in FAISS Index: {self.index.ntotal}")
@@ -222,6 +230,49 @@ class FAISSService:
 
         else:
             print("No saved chunks found. Using empty chunk list.")
+
+    def save_metadata(self) -> None:
+        """
+        Save chunk metadata to disk.
+
+        This method serializes the metadata associated with each
+        document chunk using pickle so it can be restored when the
+        application restarts.
+        """
+
+        # Build the path for the metadata file.
+        metadata_path = VECTORSTORE_DIR / "metadata.pkl"
+
+        # Open the file in binary write mode.
+        with open(metadata_path, "wb") as file:
+
+            # Serialize and save the metadata.
+            pickle.dump(self.metadata, file)
+
+        print(f"Metadata saved to: {metadata_path}")
+
+    def load_metadata(self) -> None:
+        """
+        Load chunk metadata from disk.
+
+        If metadata already exits then it loads the chunk metadata.
+        """
+        # path where we save chunk metadata
+        metadata_path = VECTORSTORE_DIR / "metadata.pkl"
+
+        # Check whether the metadata file exists.
+        if metadata_path.exists():
+
+            # Open the file in binary read mode.
+            with open(metadata_path, "rb") as file:
+
+                # load the file
+                self.metadata = pickle.load(file)
+                print(f"Metadata loaded from: {metadata_path}")
+
+        else:
+            print("No saved metadata found. Using empty metadata.")
+
 
 # Create one shared instance for the application.
 faiss_service = FAISSService()

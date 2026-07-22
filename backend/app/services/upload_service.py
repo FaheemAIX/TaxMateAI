@@ -36,11 +36,27 @@ class UploadService:
         # Split the extracted text into chunks.
         chunks = chunk_service.chunk_text(text)
 
+        # Create metadata for each chunk.
+        metadata = []
+
+        for index, chunk in enumerate(chunks):
+
+            metadata.append(
+                {
+                    "document": file.filename,
+                    "chunk_id": index
+                }
+            )
+
         # Generate embeddings from chunks.
         embeddings = embedding_service.embed_chunks(chunks)
 
         # Store embeddings and their corresponding chunks in FAISS.
-        faiss_service.add_embeddings(embeddings=embeddings,chunks=chunks)
+        faiss_service.add_embeddings(
+            embeddings=embeddings,
+            chunks=chunks,
+            metadata=metadata
+            )
 
         #print total number
         print(f"Total number of chunks {len(chunks)}")
