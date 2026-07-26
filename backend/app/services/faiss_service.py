@@ -19,11 +19,8 @@ import faiss
 # Import NumPy because FAISS works with NumPy arrays.
 import numpy as np
 
-# Import pickle for serializing Python objects.
-import pickle
-
-# Import vector store directory configuration.
-from app.core.config import VECTORSTORE_DIR
+# Import vector store repository.
+from app.repositories.vectorstore_repository import vectorstore_repository
 
 
 class FAISSService:
@@ -46,12 +43,6 @@ class FAISSService:
                 Stores the original text chunk for each vector.
         """
 
-        # Dimension of BAAI/bge-small-en-v1.5 embeddings.
-        self.dimension = 384
-
-        # Create an L2 (Euclidean distance) index. 
-        # Creates empty faiss index
-        self.index = faiss.IndexFlatL2(self.dimension)
 
         # Store original chunks.
         # creates empty list
@@ -60,10 +51,31 @@ class FAISSService:
         # Store metadata for each chunk.
         self.metadata: list[dict] = []
 
-        # Load previously saved vector store if it exists.
-        self.load_index()
-        self.load_chunks()
-        self.load_metadata()
+        # Dimension of BAAI/bge-small-en-v1.5 embeddings.
+        self.dimension = 384
+        # Load previously saved index if it exists.
+        loaded_index = vectorstore_repository.load_index()
+
+        if loaded_index is not None:
+            self.index = loaded_index
+        else:
+            # Create an L2 (Euclidean distance) index. 
+            # Creates empty faiss index
+            self.index = faiss.IndexFlatL2(self.dimension)
+
+        # load chunks
+        self.chunks = vectorstore_repository.load_chunks()
+
+        # load metadata
+        self.metadata = vectorstore_repository.load_metadata()
+
+        # DEBUG: Remove after testing.
+        print("\n===== VECTOR STORE STATUS =====")
+        print(f"Vectors  : {self.index.ntotal}")
+        print(f"Chunks   : {len(self.chunks)}")
+        print(f"Metadata : {len(self.metadata)}")
+        print("===============================\n")
+
 
     def add_embeddings(self, embeddings: list[list[float]],chunks: list[str], metadata: list[dict]) -> None:
        
@@ -95,9 +107,10 @@ class FAISSService:
         self.metadata.extend(metadata)
 
         # Persist the updated vector store.
-        self.save_index()
-        self.save_chunks()
-        self.save_metadata()
+        vectorstore_repository.save_index(self.index)
+        vectorstore_repository.save_chunks(self.chunks)
+        vectorstore_repository.save_metadata(self.metadata)
+
 
         # DEBUG: Remove after testing.
         print(f"Vectors in FAISS Index: {self.index.ntotal}")
@@ -138,141 +151,48 @@ class FAISSService:
         
         return retrieved_chunks
     
-    def save_index(self) -> None:
+    
+
+    def get_documents(self) -> dict[str, int]:
+
         """
-        Save the FAISS index to disk.
+        Retrieve a summary of all indexed documents.
 
-        This method persists the current FAISS index so that it can be
-        reloaded when the application restarts.
+        This method scans the stored metadata and counts how many
+        chunks belong to each uploaded document.
+
+        Returns:
+            A dictionary where:
+                - key   : Document filename.
+                - value : Number of chunks indexed for that document.
+
+            Example:
+                {
+                    "physics.pdf": 45,
+                    "income_tax.pdf": 28
+                }
         """
-
-        # Build the path for the FAISS index file.
-        index_path = VECTORSTORE_DIR / "index.faiss"
-
-        # Save the FAISS index.
-        faiss.write_index(self.index, str(index_path))
-
-        print(f"FAISS index saved to: {index_path}")
-
-        '''The faiss.write_index() function is used because a FAISS index is a complex object implemented internally by the FAISS library. Unlike ordinary Python objects or text files, it cannot be saved correctly using Python's built-in open() function. The FAISS library provides write_index() to serialize and store the index in its native binary format. Additionally, index_path is a Path object created by the pathlib module, whereas faiss.write_index() expects a file path as a string. Therefore, we convert the Path object into a string using str(index_path) before passing it to the function.'''
-
-        # Serialization
-        '''Serialization in Python is the process of converting an in-memory Python object (such as a dictionary, list, or custom class instance) into a format that can be easily stored in a file, saved to a database, or transmitted over a network.'''
         
-    def save_chunks(self) -> None:
-        """
-        Save the original document chunks to disk.
+        # Create the empty dictionary
+        documents = {}
 
-        This method serializes the list of document chunks
-        using pickle so they can be restored when the
-        application restarts.
-        """
+        # Loop over the metadata
+        for metadata in self.metadata:
 
-        # Build the path for the chunk file.
-        chunks_path = VECTORSTORE_DIR / "chunks.pkl"
+            # get the key where document name is stored in the metadata
+            document = metadata["document"]
 
-        # Open the file in binary write mode.
-        with open(chunks_path, "wb") as file:
+            # Checks if same document already exists the increase the count
+            if document in documents:
+                documents[document] += 1
+            # if document does not exist then assign count 1 to the document
+            else:
+                documents[document] = 1
 
-            # Serialize and save the chunks.
-            pickle.dump(self.chunks, file)
+        return documents
 
-        print(f"Chunks saved to: {chunks_path}")
-
-        '''pickle.dump() is used because self.chunks is a Python list object, not plain text. The pickle module serializes the Python object into a binary format that can later be reconstructed exactly as it was. Since the serialized data is binary rather than text, the file must be opened in binary write mode ("wb"). The built-in file.write() method cannot directly write complex Python objects such as lists, dictionaries, or custom classes, whereas pickle.dump() handles both serialization and writing automatically.'''
-
-    def load_index(self) -> None:
-        """
-        Load the FAISS index from disk.
-
-        If the index file exists, it is loaded into memory.
-        Otherwise, the empty index created during initialization
-        will continue to be used.
-        """
-
-        # Build the path of the saved FAISS index.
-        index_path = VECTORSTORE_DIR / "index.faiss"
-
-        # Check whether the index file exists.
-        if index_path.exists():
-
-            # Load the saved FAISS index.
-            self.index = faiss.read_index(str(index_path))
-
-            print(f"FAISS index loaded from: {index_path}")
-
-        else:
-            print("No saved FAISS index found. Using empty index.")
-
-
-    def load_chunks(self) -> None:
-        """
-        Load the document chunks from disk.
-
-        If the chunk file exists, it is deserialized and loaded
-        into memory. Otherwise, an empty chunk list is used.
-        """
-
-        # Build the path for the chunk file.
-        chunks_path = VECTORSTORE_DIR / "chunks.pkl"
-
-        # Check whether the chunk file exists.
-        if chunks_path.exists():
-
-            # Open the file in binary read mode.
-            with open(chunks_path, "rb") as file:
-                '''pickle.dump() stores serialized Python objects in binary format, therefore we must open the file in binary read mode ("rb") when using pickle.load().'''
-
-                # Deserialize and load the chunks.
-                self.chunks = pickle.load(file)
-
-            print(f"Chunks loaded from: {chunks_path}")
-
-        else:
-            print("No saved chunks found. Using empty chunk list.")
-
-    def save_metadata(self) -> None:
-        """
-        Save chunk metadata to disk.
-
-        This method serializes the metadata associated with each
-        document chunk using pickle so it can be restored when the
-        application restarts.
-        """
-
-        # Build the path for the metadata file.
-        metadata_path = VECTORSTORE_DIR / "metadata.pkl"
-
-        # Open the file in binary write mode.
-        with open(metadata_path, "wb") as file:
-
-            # Serialize and save the metadata.
-            pickle.dump(self.metadata, file)
-
-        print(f"Metadata saved to: {metadata_path}")
-
-    def load_metadata(self) -> None:
-        """
-        Load chunk metadata from disk.
-
-        If metadata already exits then it loads the chunk metadata.
-        """
-        # path where we save chunk metadata
-        metadata_path = VECTORSTORE_DIR / "metadata.pkl"
-
-        # Check whether the metadata file exists.
-        if metadata_path.exists():
-
-            # Open the file in binary read mode.
-            with open(metadata_path, "rb") as file:
-
-                # load the file
-                self.metadata = pickle.load(file)
-                print(f"Metadata loaded from: {metadata_path}")
-
-        else:
-            print("No saved metadata found. Using empty metadata.")
 
 
 # Create one shared instance for the application.
 faiss_service = FAISSService()
+
