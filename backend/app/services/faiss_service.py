@@ -25,6 +25,9 @@ from app.repositories.vectorstore_repository import vectorstore_repository
 # Import retrieval result from schemas
 from app.schemas.retrieval import RetrievalResult
 
+# Import document info from schemas
+from app.schemas.document import DocumentInfo
+
 
 class FAISSService:
     """
@@ -166,43 +169,58 @@ class FAISSService:
     
     
 
-    def get_documents(self) -> dict[str, int]:
 
+    def get_documents(self) -> list[DocumentInfo]:
         """
-        Retrieve a summary of all indexed documents.
+        Retrieve information about all indexed documents.
 
-        This method scans the stored metadata and counts how many
-        chunks belong to each uploaded document.
+        This method scans the stored metadata, counts the number
+        of chunks belonging to each document, and returns a list
+        of document information objects.
 
         Returns:
-            A dictionary where:
-                - key   : Document filename.
-                - value : Number of chunks indexed for that document.
+            A list of DocumentInfo objects containing:
 
-            Example:
-                {
-                    "physics.pdf": 45,
-                    "income_tax.pdf": 28
-                }
+            - document:
+                Name of the uploaded document.
+
+            - chunks:
+                Total number of indexed chunks belonging to
+                the document.
         """
-        
-        # Create the empty dictionary
-        documents = {}
 
-        # Loop over the metadata
+        # Dictionary used to count chunks for each document.
+        documents: dict[str, int] = {}
+
+        # Count the number of chunks for each document.
         for metadata in self.metadata:
 
-            # get the key where document name is stored in the metadata
+            # Get the document name.
             document = metadata["document"]
 
-            # Checks if same document already exists the increase the count
+            # Increment the chunk count if the document
+            # has already been encountered.
             if document in documents:
                 documents[document] += 1
-            # if document does not exist then assign count 1 to the document
+
+            # Otherwise initialize the chunk count.
             else:
                 documents[document] = 1
 
-        return documents
+        # Convert the dictionary into a list of
+        # DocumentInfo objects.
+        document_infos: list[DocumentInfo] = []
+
+        for document, chunks in documents.items():
+
+            document_infos.append(
+                DocumentInfo(
+                    document=document,
+                    chunks=chunks
+                )
+            )
+
+        return document_infos
 
 
 
