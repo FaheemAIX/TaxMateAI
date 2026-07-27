@@ -10,10 +10,16 @@ from app.prompts.rag_prompt import RAG_PROMPT
 # import the LLM service
 from app.services.llm_service import llm_service
 
+# import the retrieval result
+from app.schemas.retrieval import RetrievalResult
+
+# import the chat response
+from app.schemas.chat import ChatResponse
+
 class ChatService:
 
 
-    def retrieve_context(self, query: str, top_k: int = 3) -> list[str]:
+    def retrieve_context(self, query: str, top_k: int = 3) -> list[RetrievalResult]:
         """
         Retrieve the most relevant document chunks for a user's query.
 
@@ -35,14 +41,14 @@ class ChatService:
         query_embedding = embedding_service.embed_query(query)
 
         # Search the FAISS index.
-        retrieved_chunks = faiss_service.search(
+        retrieval_results = faiss_service.search(
             query_embedding=query_embedding,
             top_k=top_k
         )
 
-        return retrieved_chunks
+        return retrieval_results
 
-    def answer_question(self, query: str) -> str:
+    def answer_question(self, query: str) -> ChatResponse:
         """
         Retrieve relevant context and generate an answer.
 
@@ -54,9 +60,17 @@ class ChatService:
             AI generated answer.
         """
 
-        retrieved_chunks = self.retrieve_context(query)
+        retrieval_results = self.retrieve_context(query)
+        print("\n===== RETRIEVAL RESULTS =====")
+        print(retrieval_results)
+        print(f"Count: {len(retrieval_results)}")
 
-        context = "\n\n".join(retrieved_chunks)
+        context = "\n\n".join(
+            result.chunk for result in retrieval_results
+        )
+
+        sources = [
+            result.metadata for result in retrieval_results]
 
         prompt = RAG_PROMPT.format(
             context=context,
@@ -67,15 +81,21 @@ class ChatService:
 
         print("\n========== RETRIEVED CHUNKS ==========\n")
 
-        for i, chunk in enumerate(retrieved_chunks, start=1):
-            print(f"Chunk {i}")
+        for i, result in enumerate(retrieval_results, start=1):
+            print(f"Result {i}")
             print("-" * 40)
-            print(chunk)
-            print()
+            print(f"Document : {result.metadata.document}")
+            print(f"Chunk ID : {result.metadata.chunk_id}")
+            print("\nChunk")
+            print(result.chunk)
+
 
         print("\n========== AI RESPONSE ==========\n")
         print(response)
 
-        return response
+        return ChatResponse(
+            answer=response,
+            sources=sources
+        )
     
 chat_service = ChatService()

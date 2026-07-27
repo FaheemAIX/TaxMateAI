@@ -22,6 +22,9 @@ import numpy as np
 # Import vector store repository.
 from app.repositories.vectorstore_repository import vectorstore_repository
 
+# Import retrieval result from schemas
+from app.schemas.retrieval import RetrievalResult
+
 
 class FAISSService:
     """
@@ -115,7 +118,7 @@ class FAISSService:
         # DEBUG: Remove after testing.
         print(f"Vectors in FAISS Index: {self.index.ntotal}")
 
-    def search(self, query_embedding: list[float], top_k: int = 3) -> list[str]:
+    def search(self, query_embedding: list[float], top_k: int = 3) -> list[RetrievalResult]:
         """
         Search the FAISS index and return the most relevant text chunks.
 
@@ -137,19 +140,29 @@ class FAISSService:
         # Search the FAISS index.
         distances, indices = self.index.search(query_vector, top_k)
 
-        # Collect retrieved chunks.
-        retrieved_chunks = []
+        print("Distances:", distances)
+        print("Indices:", indices)
+        print("Total vectors:", self.index.ntotal)
+        print("Total chunks:", len(self.chunks))
+        print("Total metadata:", len(self.metadata))
+
+        # Collect retrieval result.
+        retrieval_results = []
 
         for index in indices[0]:
 
             if index != -1:
-                retrieved_chunks.append(
-                    self.chunks[index]
+                result = RetrievalResult(
+                    chunk=self.chunks[index],
+                    metadata=self.metadata[index]
                 )
+                retrieval_results.append(result)
+
+        # DEBUG: Remove after testing.
 
         print(f"Total vectors in FAISS: {self.index.ntotal}")
         
-        return retrieved_chunks
+        return retrieval_results
     
     
 
