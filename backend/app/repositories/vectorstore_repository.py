@@ -163,7 +163,53 @@ class VectorStoreRepository:
             print("No saved FAISS index found. Using empty index.")
             return None
 
+    def save_embeddings(self, embeddings: list[list[float]]) -> None:
+                """
+                Save embedding vectors to disk.
+
+                This method serializes the embedding vectors
+                using pickle so they can be restored when the
+                application restarts.
+                """
+        
+                # Build the path for the FAISS index file.
+                embedding_path = VECTORSTORE_DIR / "embeddings.pkl"
+
+                # Open the file in binary write mode.
+                with open(embedding_path, "wb") as file:
+        
+                    # Serialize and save the embeddings.
+                    pickle.dump(embeddings, file)
+
+                # print saved
+                print(f"Embeddings saved to: {embedding_path}")
     
+
+            
+    def load_embeddings(self) -> list[list[float]]:
+        """
+        Load the vector embeddings from disk.
+
+        If the embedding file exists, it is loaded into memory.
+        Otherwise, the empty embedding created during initialization
+        will continue to be used.
+        """
+
+        # Build the path of the saved embeddings.
+        embedding_path = VECTORSTORE_DIR / "embeddings.pkl"
+
+        # Check whether the embedding file exists.
+        if embedding_path.exists():
+
+            # Load the saved embeddings.
+            with open(embedding_path, "rb") as file:
+                return pickle.load(file)
+            print(f"Embeddings loaded from: {embedding_path}")
+        else:
+            print("No saved embeddings found. Using empty embeddings.")
+            return []
+   
+
 
 # Create one shared instance for the application.
 vectorstore_repository = VectorStoreRepository()

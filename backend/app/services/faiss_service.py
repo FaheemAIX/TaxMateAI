@@ -57,6 +57,10 @@ class FAISSService:
         # Store metadata for each chunk.
         self.metadata: list[dict] = []
 
+        # Store embeddings
+        self.embeddings: list[list[float]] = []
+
+
         # Dimension of BAAI/bge-small-en-v1.5 embeddings.
         self.dimension = 384
         # Load previously saved index if it exists.
@@ -75,12 +79,9 @@ class FAISSService:
         # load metadata
         self.metadata = vectorstore_repository.load_metadata()
 
-        # DEBUG: Remove after testing.
-        print("\n===== VECTOR STORE STATUS =====")
-        print(f"Vectors  : {self.index.ntotal}")
-        print(f"Chunks   : {len(self.chunks)}")
-        print(f"Metadata : {len(self.metadata)}")
-        print("===============================\n")
+        # load embeddings
+        self.embeddings = vectorstore_repository.load_embeddings()
+
 
 
     def add_embeddings(self, embeddings: list[list[float]],chunks: list[str], metadata: list[dict]) -> None:
@@ -112,10 +113,16 @@ class FAISSService:
         # Store metadata.
         self.metadata.extend(metadata)
 
+        # Store embeddings
+        self.embeddings.extend(embeddings)
+
+
         # Persist the updated vector store.
         vectorstore_repository.save_index(self.index)
         vectorstore_repository.save_chunks(self.chunks)
         vectorstore_repository.save_metadata(self.metadata)
+        vectorstore_repository.save_embeddings(self.embeddings)
+
 
 
         # DEBUG: Remove after testing.
@@ -148,6 +155,8 @@ class FAISSService:
         print("Total vectors:", self.index.ntotal)
         print("Total chunks:", len(self.chunks))
         print("Total metadata:", len(self.metadata))
+        print("Total embeddings:", len(self.embeddings))
+
 
         # Collect retrieval result.
         retrieval_results = []
@@ -221,6 +230,99 @@ class FAISSService:
             )
 
         return document_infos
+
+    def delete_document(self, document_name: str) -> bool:
+        """
+        Delete a document from the vector store.
+
+        This method removes all chunks, metadata, and embeddings
+        belonging to the specified document, rebuilds the FAISS
+        index using the remaining data, and persists the updated
+        vector store.
+
+        Args:
+            document_name:
+                Name of the document to delete.
+
+        Returns:
+            True:
+                If the document was found and deleted.
+
+            False:
+                If the document does not exist.
+        """
+        # Stores indices of chunks that should remain.
+        remaining_indices: list[int] = []
+
+        # Tracks whether the document exists.
+        document_found = False
+
+        # Iterate through all metadata.
+        for index, metadata in enumerate(self.metadata):
+
+            # Check whether this chunk belongs to
+            # the document being deleted.
+            if metadata["document"] == document_name:
+
+                document_found = True
+
+            else:
+
+                remaining_indices.append(index)
+
+            # Stop immediately if the document does not exist.
+            if not document_found:
+
+                return False
+
+        # Build new chunks
+        new_chunks = [self.chunks[index] for index in remaining_indices]
+        # Build new metadata
+        new_metadata = [self.metadata[index] for index in remaining_indices]
+        # Build new embeddings
+        new_embeddings = [self.embeddings[index] for index in remaining_indices]
+        # Build new index
+        new_index = faiss.IndexFlatL2(self.dimension)
+
+        if len(new_embeddings) > 0:
+
+            vectors = np.array(new_embeddings, dtype=np.float32)
+
+            new_index.add(vectors)
+
+        # Atomic Replacement (we have created everything first and them replace everything at once)
+        # Replace the current FAISS index.
+        self.index = new_index
+
+        # Replace the stored chunks.
+        self.chunks = new_chunks
+
+        # Replace the metadata.
+        self.metadata = new_metadata
+
+        # Replace the embeddings.
+        self.embeddings = new_embeddings
+
+        # Persist everything
+        # Save the rebuilt FAISS index
+        vectorstore_repository.save_index(self.index)
+
+        # Save chunks.
+        vectorstore_repository.save_chunks(self.chunks)
+
+        # Save metadata.
+        vectorstore_repository.save_metadata(self.metadata)
+
+        # Save embeddings.
+        vectorstore_repository.save_embeddings(self.embeddings)
+
+
+        print(f"Remaining indices : {remaining_indices}")
+        print(f"New chunks : {len(new_chunks)}")
+        print(f"New metadata : {len(new_metadata)}")
+        print(f"New embeddings : {len(new_embeddings)}")
+
+        return True
 
 
 

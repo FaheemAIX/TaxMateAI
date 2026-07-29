@@ -34,5 +34,24 @@ class DocumentService:
 
         return faiss_service.get_documents()
 
+    def delete_document(self, document_name: str) -> bool:
+        '''
+        Delete a document from the vector store.
+
+        Returns:
+            True:
+                If the document was found and deleted.
+
+            False:
+                If the document does not exist.
+        '''
+        deleted = faiss_service.delete_document(document_name)
+
+        return deleted
+    
+
+
+
+
 
 document_service = DocumentService()
